@@ -192,6 +192,17 @@ extension Storefront {
 			return self
 		}
 
+		/// The sum of all the prices of all the items in the checkout. Taxes, shipping 
+		/// and discounts excluded. 
+		@discardableResult
+		open func lineItemsSubtotalPrice(alias: String? = nil, _ subfields: (MoneyV2Query) -> Void) -> CheckoutQuery {
+			let subquery = MoneyV2Query()
+			subfields(subquery)
+
+			addField(field: "lineItemsSubtotalPrice", aliasSuffix: alias, subfields: subquery)
+			return self
+		}
+
 		@discardableResult
 		open func note(alias: String? = nil) -> CheckoutQuery {
 			addField(field: "note", aliasSuffix: alias)
@@ -401,6 +412,12 @@ extension Storefront {
 					throw SchemaViolationError(type: Checkout.self, field: fieldName, value: fieldValue)
 				}
 				return try CheckoutLineItemConnection(fields: value)
+
+				case "lineItemsSubtotalPrice":
+				guard let value = value as? [String: Any] else {
+					throw SchemaViolationError(type: Checkout.self, field: fieldName, value: fieldValue)
+				}
+				return try MoneyV2(fields: value)
 
 				case "note":
 				if value is NSNull { return nil }
@@ -617,6 +634,16 @@ extension Storefront {
 			return field(field: "lineItems", aliasSuffix: alias) as! Storefront.CheckoutLineItemConnection
 		}
 
+		/// The sum of all the prices of all the items in the checkout. Taxes, shipping 
+		/// and discounts excluded. 
+		open var lineItemsSubtotalPrice: Storefront.MoneyV2 {
+			return internalGetLineItemsSubtotalPrice()
+		}
+
+		func internalGetLineItemsSubtotalPrice(alias: String? = nil) -> Storefront.MoneyV2 {
+			return field(field: "lineItemsSubtotalPrice", aliasSuffix: alias) as! Storefront.MoneyV2
+		}
+
 		open var note: String? {
 			return internalGetNote()
 		}
@@ -804,6 +831,10 @@ extension Storefront {
 					case "lineItems":
 					response.append(internalGetLineItems())
 					response.append(contentsOf: internalGetLineItems().childResponseObjectMap())
+
+					case "lineItemsSubtotalPrice":
+					response.append(internalGetLineItemsSubtotalPrice())
+					response.append(contentsOf: internalGetLineItemsSubtotalPrice().childResponseObjectMap())
 
 					case "order":
 					if let value = internalGetOrder() {
